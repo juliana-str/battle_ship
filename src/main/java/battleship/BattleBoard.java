@@ -1,10 +1,11 @@
 package battleship;
 
-import java.util.Objects;
+import java.util.*;
 
 public class BattleBoard {
     private Ship[][] battleBoard;
     private String playerName;
+    private static Map<String, List<Coordinates>> shipCoordinates = new HashMap<>();
 
     public BattleBoard(Ship[][] battleBoard, String playerName) {
         this.battleBoard = battleBoard;
@@ -19,6 +20,10 @@ public class BattleBoard {
         return this.playerName;
     }
 
+    public static void fullShipCoordinates(String shipType, List<Coordinates> coordinatesList) {
+        shipCoordinates.put(shipType, coordinatesList);
+    }
+
     public boolean isAliveShips() {
         for (Ship[] shipsOnBoard : this.battleBoard) {
             for (Ship ship : shipsOnBoard) {
@@ -30,11 +35,21 @@ public class BattleBoard {
         return false;
     }
 
-    public boolean isKilledShip(int[] coordinates) {
-        if (this.battleBoard[coordinates[0]][coordinates[1]] == Ship.SINGLE_DECK_SHIP) {
+    public boolean isKilledShip(Coordinates coordinates, String shipType) {
+        if (Objects.equals(shipType, "SINGLE_DECK_SHIP")) {
             return true;
         }
-//        else if() // ToDo
+        for (int count = 1; shipCoordinates.containsKey(shipType + count); count++) {
+            List<Coordinates> values = shipCoordinates.get(shipType + count);
+            if (values.contains(coordinates)) {
+                for (Coordinates coords : values) {
+                    if (!(this.battleBoard[coords.getX()][coords.getY()] == Ship.FIRE)) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+        }
         return false;
     }
 

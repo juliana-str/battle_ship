@@ -3,6 +3,8 @@ package battleship;
 import battleship.exceptions.*;
 
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class DeckShipService {
     private static Map<Integer, String[]> shipTypesMap = new HashMap<>();
@@ -14,163 +16,162 @@ public class DeckShipService {
         shipTypesMap.put(1, new String[]{"x1,y1", "одно", "4"});
     }
 
-    private static int[][] checkFormat(String input, int len) {
-        int[][] newCoordinates = new int[len][2];
+    private static List<Coordinates> checkFormat(String input, int len) {
+        List<Coordinates> coordinatesList = new ArrayList();
         try {
-            if (input.matches("\\w")) {
+            Pattern pattern = Pattern.compile("\\d\\,\\d");
+            Matcher matcher = pattern.matcher(input);
+            if (!matcher.find()) {
                 throw new CoordinateNumberException();
             }
-            String[] coordinates = input.split(";");
-
-            for (int i = 0; i < coordinates.length; i++) {
-                if (!coordinates[i].matches("\\d\\,\\d")) {
+            String[] inputCoordinates = input.split(";");
+            for (String inputCoords : inputCoordinates) {
+                if (!inputCoords.matches("\\d\\,\\d")) {
                     throw new CoordinateInputFormatException();
                 }
-                int[] newCoordinat = new int[]{
-                        Integer.parseInt(coordinates[i].substring(0, 1)),
-                        Integer.parseInt(coordinates[i].substring(2))
-                };
-                if ((newCoordinat[0] > 9 | newCoordinat[0] < 0) && (newCoordinat[1] > 9 | newCoordinat[1] < 0)) {
+                String[] coord = inputCoords.split(",");
+                Coordinates coordinates = new Coordinates(Integer.parseInt(coord[0]), Integer.parseInt(coord[1]));
+                if (coordinates.getX() > 9 || coordinates.getY() > 9 || coordinates.getX() < 0 || coordinates.getY() < 0) {
                     throw new CoordinateNumberException();
                 }
-                if (!(coordinates.length == len)) {
-                    throw new CoordinateInputCount();
-                }
-                newCoordinates[i] = newCoordinat;
+                coordinatesList.add(coordinates);
             }
-            return newCoordinates;
+            if (!(inputCoordinates.length == len)) {
+                throw new CoordinateInputCount();
+            }
+            return coordinatesList;
         } catch (CoordinateInputFormatException | CoordinateInputCount | CoordinateNumberException exception) {
             System.out.println(exception.getMessage());
-        }
-        return null;
-    }
-
-    private static void createAroundShipArea(Ship[][] ship, int[][] formattedCoordinates) {
-        for (int[] coords : formattedCoordinates) {
-            if (coords[0] > 0 && (ship[coords[0] - 1][coords[1]] == null)) {
-                ship[coords[0] - 1][coords[1]] = Ship.AREA;
-            }
-            if (coords[1] > 0 && (ship[coords[0]][coords[1] - 1] == null)) {
-                ship[coords[0]][coords[1] - 1] = Ship.AREA;
-            }
-            if (coords[0] < 9 && (ship[coords[0] + 1][coords[1]] == null)) {
-                ship[coords[0] + 1][coords[1]] = Ship.AREA;
-            }
-            if (coords[1] < 9 && (ship[coords[0]][coords[1] + 1] == null)) {
-                ship[coords[0]][coords[1] + 1] = Ship.AREA;
-            }
-            if ((coords[0] > 0 && coords[1] > 0) && (ship[coords[0] - 1][coords[1] - 1] == null)) {
-                ship[coords[0] - 1][coords[1] - 1] = Ship.AREA;
-            }
-            if ((coords[0] < 9 && coords[1] < 9) && (ship[coords[0] + 1][coords[1] + 1] == null)) {
-                ship[coords[0] + 1][coords[1] + 1] = Ship.AREA;
-            }
-            if ((coords[0] > 0 && coords[1] < 9) && (ship[coords[0] - 1][coords[1] + 1] == null)) {
-                ship[coords[0] - 1][coords[1] + 1] = Ship.AREA;
-            }
-            if ((coords[0] < 9 && coords[1] > 0) && (ship[coords[0] + 1][coords[1] - 1] == null)) {
-                ship[coords[0] + 1][coords[1] - 1] = Ship.AREA;
-            }
+            return null;
         }
     }
 
-    private static boolean checkCoordinatesLocation(int[][] input, Ship[][] ship) {
+    private static void createAroundShipArea(Ship[][] ship, List<Coordinates> coordinatesList) {
+        for (Coordinates coords : coordinatesList) {
+            int x = coords.getX();
+            int y = coords.getY();
+            if (x > 0 && (ship[x - 1][y] == null)) {
+                ship[x - 1][y] = Ship.AREA;
+            }
+            if (y > 0 && (ship[x][y - 1] == null)) {
+                ship[x][y - 1] = Ship.AREA;
+            }
+            if (x < 9 && (ship[x + 1][y] == null)) {
+                ship[x + 1][y] = Ship.AREA;
+            }
+            if (y < 9 && (ship[x][y + 1] == null)) {
+                ship[x][y + 1] = Ship.AREA;
+            }
+            if ((x > 0 && y > 0) && (ship[x - 1][y - 1] == null)) {
+                ship[x - 1][y - 1] = Ship.AREA;
+            }
+            if ((x < 9 && y < 9) && (ship[x + 1][y + 1] == null)) {
+                ship[x + 1][y + 1] = Ship.AREA;
+            }
+            if ((x > 0 && y < 9) && (ship[x - 1][y + 1] == null)) {
+                ship[x - 1][y + 1] = Ship.AREA;
+            }
+            if ((x < 9 && y > 0) && (ship[x + 1][y - 1] == null)) {
+                ship[x + 1][y - 1] = Ship.AREA;
+            }
+        }
+    }
+
+    private static boolean checkCoordinatesLocation(List<Coordinates> coordinatesList, Ship[][] ship) {
         try {
-            Arrays.stream(input).sorted();
-            int x = input[0][0];
-            int y = input[0][1];
-            for (int[] nums : input)
-                if (!(ship[nums[0]][nums[1]] == null)) {
-                    if (Objects.equals(ship[nums[0]][nums[1]].getShipType(), "\uD83D\uDEA2")) {
+            for (Coordinates coordinates : coordinatesList) {
+                Ship currentShip = ship[coordinates.getX()][coordinates.getY()];
+                if (!(currentShip == null)) {
+                    if (Objects.equals(currentShip.getShipType(), "\uD83D\uDEA2")) {
                         throw new BorderViolationError();
-                    } else if (Objects.equals(ship[nums[0]][nums[1]].getShipType(), "\uD83D\uDFE6")) {
+                    } else if (Objects.equals(currentShip.getShipType(), "\uD83D\uDFE6")) {
                         throw new CoordinateAreaException();
                     }
-                } else if (!(nums[0] == x) | !(nums[1] == y) && nums[0] - 1 == x | nums[1] - 1 == y) {
-//                    x = nums[0];
-//                    y = nums[1];
-//                    throw new CoordinateLocationError(); //ToDo
                 }
+            }
+            Comparator<Coordinates> comparatorY = (p1, p2) -> p1.getY() - p2.getY();
+            coordinatesList.sort(comparatorY);
+            if (coordinatesList.size() > 1) {
+                for (int i = 1; i < coordinatesList.size(); i++) {
+                    if (!(((coordinatesList.get(i - 1).getX() == coordinatesList.get(i).getX()) &&
+                            (coordinatesList.get(i).getY() - coordinatesList.get(i - 1).getY() == 1)) ||
+                            (((coordinatesList.get(i - 1).getY() == coordinatesList.get(i).getY()) &&
+                                    (coordinatesList.get(i).getX() - coordinatesList.get(i - 1).getX() == 1))))) {
+                        throw new CoordinateLocationError();
+                    }
+                }
+            }
             return true;
-        } catch (BorderViolationError | CoordinateAreaException exception) {
+        } catch (BorderViolationError | CoordinateLocationError | CoordinateAreaException exception) {
             System.out.println(exception.getMessage());
         }
         return false;
     }
 
-//    public static void inputCoordinates(Ship[][] ship, int count, int shipDesk) {
-//        while (shipDesk >= 1) {
-//            String[] shipType = shipTypesMap.get(shipDesk);
-//            while (count <= Integer.parseInt(shipType[2])) {
-//                System.out.println("Введите координаты для " + (count) + " " +
-//                        shipType[1] + "палубного корабля, формат данных: " + shipType[0]);
-//                Scanner scanner = new Scanner(System.in);
-//                String coordinates = scanner.nextLine();
-//                int[][] formattedCoordinates = checkFormat(coordinates, shipDesk);
-//                if (formattedCoordinates == null) {
-//                    inputCoordinates(ship, count, shipDesk);
-//                } else if (!checkCoordinatesLocation(formattedCoordinates, ship)) {
-//                    inputCoordinates(ship, count, shipDesk);
-//                }
-//                assert formattedCoordinates != null;
-//                switch (shipDesk) {
-//                    case (4):
-//                        createFourDeckShip(ship, formattedCoordinates);
-//                    case (3):
-//                        createThreeDeckShip(ship, formattedCoordinates);
-//                    case (2):
-//                        createTwoDeckShip(ship, formattedCoordinates);
-//                    case (1):
-//                        createSingleDeckShip(ship, formattedCoordinates);
-//                }
-//                count++;
-//            }
-//            count = 1;
-//            shipDesk--;
-//        }
-//        createEmpty(ship);
-//    }
-
-    public static void inputCoordinates(Ship[][] ship, int count, int shipDesk) {
-        createFourDeckShip(ship, new int[][]{{0, 0}, {0, 1}, {0, 2}, {0, 3}});
-        createThreeDeckShip(ship, new int[][]{{2, 6}, {2, 7}, {2, 8}});
-        createThreeDeckShip(ship, new int[][]{{3, 2}, {4, 2}, {5, 2}});
-        createTwoDeckShip(ship, new int[][]{{4, 4}, {4, 5}});
-        createTwoDeckShip(ship, new int[][]{{9, 8}, {9, 9}});
-        createTwoDeckShip(ship, new int[][]{{7, 2}, {7, 3}});
-        createSingleDeckShip(ship, new int[][]{{9, 0}});
-        createSingleDeckShip(ship, new int[][]{{2, 0}});
-        createSingleDeckShip(ship, new int[][]{{7, 6}});
-        createSingleDeckShip(ship, new int[][]{{4, 8}});
+    public static void inputCoordinates(Ship[][] ship, int count, int shipDesk, Scanner scanner) {
+        while (shipDesk >= 1) {
+            String[] shipType = shipTypesMap.get(shipDesk);
+            while (count <= Integer.parseInt(shipType[2]) && shipDesk > 0) {
+                System.out.println("Введите координаты для " + (count) + " " +
+                        shipType[1] + "палубного корабля, формат данных: " + shipType[0]);
+                String coordinates = scanner.nextLine();
+                List<Coordinates> coordinatesList = checkFormat(coordinates, shipDesk);
+                if (coordinatesList == null) {
+                    inputCoordinates(ship, count, shipDesk, scanner);
+                } else if (!checkCoordinatesLocation(coordinatesList, ship)) {
+                    inputCoordinates(ship, count, shipDesk, scanner);
+                }
+                switch (shipDesk) {
+                    case (4):
+                        createFourDeckShip(ship, coordinatesList);
+                        BattleBoard.fullShipCoordinates("FOUR_DECK_SHIP" + count, coordinatesList);
+                        break;
+                    case (3):
+                        createThreeDeckShip(ship, coordinatesList);
+                        BattleBoard.fullShipCoordinates("THREE_DECK_SHIP" + count, coordinatesList);
+                        break;
+                    case (2):
+                        createTwoDeckShip(ship, coordinatesList);
+                        BattleBoard.fullShipCoordinates("TWO_DECK_SHIP" + count, coordinatesList);
+                        break;
+                    case (1):
+                        createSingleDeckShip(ship, coordinatesList);
+                        BattleBoard.fullShipCoordinates("SINGLE_DECK_SHIP" + count, coordinatesList);
+                }
+                count++;
+            }
+            count = 1;
+            shipDesk--;
+        }
         createEmpty(ship);
     }
 
-    public static void createFourDeckShip(Ship[][] ship, int[][] coordinates) {
-        for (int[] coordinate : coordinates) {
-            ship[coordinate[0]][coordinate[1]] = Ship.FOUR_DECK_SHIP;
+    public static void createFourDeckShip(Ship[][] ship, List<Coordinates> coordinatesList) {
+        for (Coordinates coordinate : coordinatesList) {
+            ship[coordinate.getX()][coordinate.getY()] = Ship.FOUR_DECK_SHIP;
         }
-        createAroundShipArea(ship, coordinates);
+        createAroundShipArea(ship, coordinatesList);
     }
 
-    public static void createThreeDeckShip(Ship[][] ship, int[][] coordinates) {
-        for (int[] coordinate : coordinates) {
-            ship[coordinate[0]][coordinate[1]] = Ship.THREE_DECK_SHIP;
+    public static void createThreeDeckShip(Ship[][] ship, List<Coordinates> coordinatesList) {
+        for (Coordinates coordinate : coordinatesList) {
+            ship[coordinate.getX()][coordinate.getY()] = Ship.THREE_DECK_SHIP;
         }
-        createAroundShipArea(ship, coordinates);
+        createAroundShipArea(ship, coordinatesList);
     }
 
-    public static void createTwoDeckShip(Ship[][] ship, int[][] coordinates) {
-        for (int[] coordinate : coordinates) {
-            ship[coordinate[0]][coordinate[1]] = Ship.TWO_DECK_SHIP;
+    public static void createTwoDeckShip(Ship[][] ship, List<Coordinates> coordinatesList) {
+        for (Coordinates coordinate : coordinatesList) {
+            ship[coordinate.getX()][coordinate.getY()] = Ship.TWO_DECK_SHIP;
         }
-        createAroundShipArea(ship, coordinates);
+        createAroundShipArea(ship, coordinatesList);
     }
 
-    public static void createSingleDeckShip(Ship[][] ship, int[][] coordinates) {
-        for (int[] coordinate : coordinates) {
-            ship[coordinate[0]][coordinate[1]] = Ship.SINGLE_DECK_SHIP;
+    public static void createSingleDeckShip(Ship[][] ship, List<Coordinates> coordinatesList) {
+        for (Coordinates coordinate : coordinatesList) {
+            ship[coordinate.getX()][coordinate.getY()] = Ship.SINGLE_DECK_SHIP;
         }
-        createAroundShipArea(ship, coordinates);
+        createAroundShipArea(ship, coordinatesList);
     }
 
     public static void createEmpty(Ship[][] ship) {
