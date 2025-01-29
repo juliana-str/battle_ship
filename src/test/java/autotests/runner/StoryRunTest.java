@@ -30,7 +30,7 @@ public class StoryRunTest extends JUnitStories {
         return new InstanceStepsFactory(
                 configuration(),
                 new SingleDeskShipCreationSteps(),
-                new ShipCreationSteps(),
+                new ShipsCreationSteps(),
                 new AddPlayerSteps()
         );
     }
